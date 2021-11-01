@@ -1,0 +1,74 @@
+LanRouter set debug_ 0
+set ns [new Simulator] 
+$ns color 1 Blue 
+$ns color 2 Red 
+#Open the Trace files 
+set file1 [open out.tr w] 
+set winfile [open WinFile w] 
+$ns trace-all $file1 
+set file2 [open out.nam w] 
+$ns namtrace-all $file2 
+#Define a 'finish' procedure 
+proc finish {} { 
+global ns file1 file2 
+$ns flush-trace 
+close $file1 
+close $file2 
+exec nam out.nam & 
+exit 0 
+} 
+set n0 [$ns node] 
+set n1 [$ns node] 
+set n2 [$ns node] 
+set n3 [$ns node] 
+set n4 [$ns node] 
+
+$n1 color red 
+$n1 shape box
+$ns duplex-link $n0 $n1 2Mb 10ms DropTail 
+$ns duplex-link $n1 $n2 2Mb 10ms DropTail 
+$ns duplex-link $n2 $n3 0.3Mb 100ms DropTail 
+$ns duplex-link $n3 $n4 0.3Mb 100ms DropTail 
+$ns duplex-link $n4 $n0 0.3Mb 100ms DropTail 
+
+#Setup a UDP connection 
+set udp [new Agent/UDP] 
+$ns attach-agent $n1 $udp 
+set null [new Agent/Null] 
+$ns attach-agent $n4 $null 
+$ns connect $udp $null 
+
+set udp1 [new Agent/UDP] 
+$ns attach-agent $n4 $udp1 
+set null1 [new Agent/Null] 
+$ns attach-agent $n1 $null1 
+$ns connect $udp1 $null1 
+
+
+$udp set fid_ 1 
+$udp1 set fid_ 2 
+#Setup a CBR over UDP connection 
+set cbr [new Application/Traffic/CBR] 
+$cbr attach-agent $udp 
+
+set cbr1 [new Application/Traffic/CBR] 
+$cbr1 attach-agent $udp1 
+
+
+$cbr set type_ CBR 
+$cbr set packet_size_ 1000 
+$cbr set rate_ 0.01mb 
+$cbr set random_ false 
+
+$cbr1 set type_ CBR 
+$cbr1 set packet_size_ 1000 
+$cbr1 set rate_ 0.01mb 
+$cbr1 set random_ false 
+
+$ns at 0.1 "$cbr start" 
+$ns at 0.1 "$cbr1 start" 
+
+$ns at 124.5 "$cbr stop" 
+$ns at 124.5 "$cbr1 stop" 
+$ns at 125.0 "finish" 
+$ns run
